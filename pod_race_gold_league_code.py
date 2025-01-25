@@ -29,20 +29,13 @@ def adjust_target_position(target_x, target_y, speed, speed_direction):
 
 
 
-def calc_speed(previous_x, previous_y, x, y):
-    return distance(previous_x, previous_y, x, y)
+def calc_speed(speed_x, speed_y):
+    return math.sqrt(speed_x ** 2 + speed_y ** 2)
 
 
-def calc_speed_direction(previous_x, previous_y, x, y):
-    dx = x - previous_x
-    dy = y - previous_y
-    
-    magnitude = math.sqrt(dx ** 2 + dy ** 2)
-    
-    if magnitude == 0:
-        return 0, 0
-    
-    return dx / magnitude, dy / magnitude
+def calc_speed_direction(vx, vy):
+    norm = math.sqrt(vx ** 2 + vy ** 2)
+    return vx / norm, vy / norm
 
 
 def is_new_checkpoint(next_checkpoint_x, next_checkpoint_y, map_memory):
@@ -52,39 +45,24 @@ def is_new_checkpoint(next_checkpoint_x, next_checkpoint_y, map_memory):
     return True
 
 
-def find_next_checkpoint(map_memory, next_x, next_y):
-    for i, checkpoint in enumerate(map_memory):
-        dist = distance(next_x, next_y, checkpoint[0], checkpoint[1])
-        if dist < 1000:
-            if i + 1 < len(map_memory):
-                return map_memory[i + 1]
-            else:
-                return map_memory[0]
-    return (next_x, next_y)
-
-
-def calc_first_checkpoint(x, y, opponent_x, opponent_y):
-    return (opponent_x + x) // 2, (opponent_y + y) // 2
+def go_next_checkpoint(map_memory, next_cp_id):
+    if next_cp_id == checkpoint_count - 1:
+        return map_memory[0]
+    else:
+        return map_memory[next_cp_id + 1]
 
 def calculate_distance_threshold(speed):
     return speed * 4.5
 
-# Trouver un ratio equivalent à
-# if not first_turn and next_checkpoint_dist < 3000 and speed > 800:
-#     next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
-# elif not first_turn and next_checkpoint_dist < 2500 and speed > 600:
-#     next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
-# elif not first_turn and next_checkpoint_dist < 2250 and speed > 500:
-#     next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
-# elif not first_turn and next_checkpoint_dist < 2000 and speed > 500:
-#     next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
-# elif not first_turn and next_checkpoint_dist < 1750:
-#     next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
-
-
 
 # game loop
 map_memory = []
+laps = int(input())
+checkpoint_count = int(input())
+for i in range(checkpoint_count):
+    checkpoint_x, checkpoint_y = [int(j) for j in input().split()]
+    map_memory.append((checkpoint_x, checkpoint_y))
+
 boost_available = True
 first_action = True
 first_turn = True
@@ -96,55 +74,64 @@ speed = 0
 speed_direction = 0, 0
 max_speed = 961
 while True:
-    x, y, next_checkpoint_x, next_checkpoint_y, next_checkpoint_dist, next_checkpoint_angle = [int(i) for i in input().split()]
-    opponent_x, opponent_y = [int(i) for i in input().split()]
-    if first_action:
-        first_action = False
-        map_memory.append(calc_first_checkpoint(x, y, opponent_x, opponent_y))
-    else:
-        speed = calc_speed(previous_x, previous_y, x, y)
-        speed_direction = calc_speed_direction(previous_x, previous_y, x, y)
-    if first_turn and next_checkpoint_x == map_memory[0][0] and next_checkpoint_y == map_memory[0][1]:
-        first_turn = False
-    previous_x = x
-    previous_y = y
-    if is_new_checkpoint(next_checkpoint_x, next_checkpoint_y, map_memory):
-        map_memory.append((next_checkpoint_x, next_checkpoint_y))
-        print(f"NEW CHECKPOINT: {next_checkpoint_x}, {next_checkpoint_y}", file=sys.stderr)
-    threshold = calculate_distance_threshold(speed)
-    if not first_turn and next_checkpoint_dist < threshold:
-        next_checkpoint_x, next_checkpoint_y = find_next_checkpoint(map_memory, next_checkpoint_x, next_checkpoint_y)
+    pod_data = []
+    for i in range(2):
+        # x: x position of your pod
+        # y: y position of your pod
+        # vx: x speed of your pod
+        # vy: y speed of your pod
+        # angle: angle of your pod
+        # next_check_point_id: next check point id of your pod
+        x, y, vx, vy, angle, next_check_point_id = [int(j) for j in input().split()]
+        pod_data.append((x, y, vx, vy, angle, next_check_point_id))
+    
+    opponent_positions = []
+    for i in range(2):
+        # x_2: x position of the opponent's pod
+        # y_2: y position of the opponent's pod
+        # vx_2: x speed of the opponent's pod
+        # vy_2: y speed of the opponent's pod
+        # angle_2: angle of the opponent's pod
+        # next_check_point_id_2: next check point id of the opponent's pod
+        x_2, y_2, vx_2, vy_2, angle_2, next_check_point_id_2 = [int(j) for j in input().split()]
+        opponent_positions.append((x_2, y_2, vx_2, vy_2, angle_2, next_check_point_id_2))
 
+    for i in range(2):
+        x, y, vx, vy, next_checkpoint_angle, next_check_point_id = pod_data[i]
+        speed = calc_speed(vx, vy)
+        speed_direction = calc_speed_direction(vx, vy)
+        threshold = calculate_distance_threshold(speed)
+        next_checkpoint_dist = distance(x, y, next_checkpoint_x, next_checkpoint_y)
+        if next_checkpoint_dist < threshold:
+            next_checkpoint_x, next_checkpoint_y = go_next_checkpoint(map_memory, next_check_point_id)
+            print(f"NEXT CHECKPOINT: {next_checkpoint_x}, {next_checkpoint_y}", file=sys.stderr)
 
-        
-        print(f"NEXT CHECKPOINT: {next_checkpoint_x}, {next_checkpoint_y}", file=sys.stderr)
+        target_x, target_y = calc_target_position(x, y, next_checkpoint_x, next_checkpoint_y, checkpoint_radius)
+        target_x, target_y = adjust_target_position(target_x, target_y, speed, speed_direction)
+        target_distance = distance(x, y, target_x, target_y)
 
-    target_x, target_y = calc_target_position(x, y, next_checkpoint_x, next_checkpoint_y, checkpoint_radius)
-    target_x, target_y = adjust_target_position(target_x, target_y, speed, speed_direction)
-    target_distance = distance(x, y, target_x, target_y)
+        if abs(next_checkpoint_angle) < 2 and target_distance > 6000 and boost_available:
+            boost = "BOOST"
+            boost_available = False
+        elif abs(next_checkpoint_angle) < 20:
+            boost = "100"
+        elif abs(next_checkpoint_angle) < 45:
+            boost = "95"
+        elif abs(next_checkpoint_angle) < 90:
+            boost = "100"
+        elif abs(next_checkpoint_angle) < 135:
+            boost = "40"
+        else:
+            boost = "0"
 
-    if abs(next_checkpoint_angle) < 2 and target_distance > 6000 and boost_available:
-        boost = "BOOST"
-        boost_available = False
-    elif abs(next_checkpoint_angle) < 20:
-        boost = "100"
-    elif abs(next_checkpoint_angle) < 45:
-        boost = "95"
-    elif abs(next_checkpoint_angle) < 90:
-        boost = "100"
-    elif abs(next_checkpoint_angle) < 135:
-        boost = "40"
-    else:
-        boost = "0"
+        # Print all details in a readable way
+        print(f"Position: {x}, {y}", file=sys.stderr)
+        print(f"Speed: {speed}, Speed direction: {speed_direction}", file=sys.stderr)
+        print(f"Threshold: {threshold}", file=sys.stderr)
+        print(f"next_checkpoint_x: {next_checkpoint_x}, next_checkpoint_y: {next_checkpoint_y}", file=sys.stderr)
+        print(f"map_memory: {map_memory}", file=sys.stderr)
+        print(f"next_checkpoint_distance: {next_checkpoint_dist}, target_distance: {target_distance}", file=sys.stderr)
+        print(f"boost: {boost}", file=sys.stderr)
+        print(f"Angle: {next_checkpoint_angle}", file=sys.stderr)
 
-    # Print all details in a readable way
-    print(f"Position: {x}, {y}", file=sys.stderr)
-    print(f"Speed: {speed}, Speed direction: {speed_direction}", file=sys.stderr)
-    print(f"Threshold: {threshold}", file=sys.stderr)
-    print(f"next_checkpoint_x: {next_checkpoint_x}, next_checkpoint_y: {next_checkpoint_y}", file=sys.stderr)
-    print(f"map_memory: {map_memory}", file=sys.stderr)
-    print(f"next_checkpoint_distance: {next_checkpoint_dist}, target_distance: {target_distance}", file=sys.stderr)
-    print(f"boost: {boost}", file=sys.stderr)
-    print(f"Angle: {next_checkpoint_angle}", file=sys.stderr)
-
-    print(f"{int(target_x)} {int(target_y)} {boost} {boost}")
+        print(f"{int(target_x)} {int(target_y)} {boost}")
