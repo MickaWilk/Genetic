@@ -67,7 +67,7 @@ def calc_first_checkpoint(x, y, opponent_x, opponent_y):
     return (opponent_x + x) // 2, (opponent_y + y) // 2
 
 def calculate_distance_threshold(speed):
-    return speed * 4
+    return speed * 4.5
 
 # Trouver un ratio equivalent à
 # if not first_turn and next_checkpoint_dist < 3000 and speed > 800:
